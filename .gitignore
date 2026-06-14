@@ -1,0 +1,24 @@
+# Raw source data — large and re-downloadable from the original providers
+data/raw/
+
+# Generated outputs (maps, exports, reports) — derived, not source-controlled.
+# Ignore the contents but keep the empty directory tracked via its .gitkeep.
+outputs/*
+!outputs/.gitkeep
+
+# QGIS lock and backup files
+*.qgz~
+*.qgs~
+*.lck
+
+# macOS / Windows OS metadata files
+.DS_Store
+Thumbs.db
+
+# Machine-local Claude Code settings — per-developer, not shared
+.claude/settings.local.json
+
+# Python artifacts
+__pycache__/
+.venv/
+*.pyc

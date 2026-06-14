@@ -1,0 +1,6 @@
+# Spatial analysis dependencies for Saint Paul boulevard trees scripts.
+# Pin versions as the project stabilizes.
+
+geopandas
+pandas
+pyogrio
