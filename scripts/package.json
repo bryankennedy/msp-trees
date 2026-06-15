@@ -1,0 +1,13 @@
+{
+  "name": "msp-trees-scripts",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Data pipeline: shapefile → GeoJSON → (later) PMTiles + D1",
+  "scripts": {
+    "extract": "bun run extract.mjs"
+  },
+  "dependencies": {
+    "shapefile": "^0.6.6"
+  }
+}
