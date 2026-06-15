@@ -22,3 +22,23 @@ Thumbs.db
 __pycache__/
 .venv/
 *.pyc
+
+# Pipeline build artifacts (GeoJSON, PMTiles) — re-derivable from data/raw/
+data/processed/
+
+# Node / Bun deps and build output — re-derivable from package.json + bun.lockb
+node_modules/
+app/dist/
+app/.vite/
+
+# Local environment secrets — must never be committed (per global rules)
+.env
+.env.local
+.env.*.local
+
+# TLS material for the local HTTPS dev server — host-specific, regenerable
+app/.certs/
+
+# Vite / Bun caches
+.vite/
+.bun/
