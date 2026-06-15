@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <title>Species Index — Saint Paul Boulevard Trees</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app" class="app-scroll">
+      <header class="plate-header">
+        <h1>
+          <span class="plate-title-main">Plate II.</span>
+          <span class="plate-title-sub">Species Index of the Boulevard Trees</span>
+        </h1>
+        <p class="plate-subtitle">
+          tally by recorded common name · <span id="species-count">…</span> distinct species
+          across <span id="tree-total">…</span> records
+        </p>
+        <nav class="plate-nav">
+          <a href="/" class="plate-nav-link">Map</a>
+          <a href="/species" class="plate-nav-link is-active" aria-current="page">Species index</a>
+        </nav>
+      </header>
+
+      <main class="report" aria-label="Species counts">
+        <p id="report-status" class="report-status">Tallying species…</p>
+
+        <section id="report-body" class="report-body" hidden>
+          <div class="report-summary" id="report-summary"></div>
+
+          <section class="report-section">
+            <h2 class="report-h2">Distribution by abundance <span class="report-h2-note">(log scale)</span></h2>
+            <p class="report-note">
+              One bar per species, ordered most to least common. The vertical axis is
+              logarithmic, so the long tail of rare species stays legible beside the
+              dominant maples and oaks.
+            </p>
+            <figure class="histo-figure">
+              <div id="histogram"></div>
+              <figcaption id="histo-caption" class="report-note"></figcaption>
+            </figure>
+          </section>
+
+          <section class="report-section">
+            <h2 class="report-h2">Full tally</h2>
+            <p class="report-note">
+              Rows shaded <span class="rare-key rare-key--rare">amber</span> have 5 or fewer
+              specimens; <span class="rare-key rare-key--single">deep amber</span> marks
+              singletons — a single tree of that kind in the entire survey. Non-tree records
+              (vacant sites, stumps, do-not-plant flags) are listed separately at the foot.
+            </p>
+            <table class="tally">
+              <thead>
+                <tr>
+                  <th class="col-rank">#</th>
+                  <th class="col-name">Species (common name)</th>
+                  <th class="col-count">Count</th>
+                  <th class="col-share">Share</th>
+                </tr>
+              </thead>
+              <tbody id="tally-body"></tbody>
+            </table>
+          </section>
+        </section>
+      </main>
+
+      <footer class="plate-footer">
+        <span>v0.1 · data: City of Saint Paul Forestry · vellum plate, in progress</span>
+      </footer>
+    </div>
+    <script type="module" src="/src/species.ts"></script>
+  </body>
+</html>

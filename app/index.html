@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <title>Saint Paul Boulevard Trees — A Botanical Plate</title>
+    <link rel="preconnect" href="https://tiles.openfreemap.org" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="plate-header">
+        <h1>
+          <span class="plate-title-main">Plate I.</span>
+          <span class="plate-title-sub">Public Boulevard Trees of Saint Paul, Minnesota</span>
+        </h1>
+        <p class="plate-subtitle">
+          drawn from the City Forestry survey · <span id="tree-count">…</span> specimens
+        </p>
+        <nav class="plate-nav">
+          <a href="/" class="plate-nav-link is-active" aria-current="page">Map</a>
+          <a href="/species" class="plate-nav-link">Species index</a>
+        </nav>
+      </header>
+      <main id="map" aria-label="Map of Saint Paul boulevard trees"></main>
+      <aside id="legend" class="legend" aria-label="Genus legend">
+        <h2 class="legend-title">Genus</h2>
+        <ul id="legend-items" class="legend-list"></ul>
+      </aside>
+      <aside id="popup-card" class="popup-card" hidden>
+        <button class="popup-close" aria-label="Close">×</button>
+        <h2 class="popup-species" id="p-spp"></h2>
+        <p class="popup-bot" id="p-bot"></p>
+        <dl class="popup-fields">
+          <dt>Condition</dt><dd id="p-cond"></dd>
+          <dt>Trunk dia.</dt><dd id="p-dbh"></dd>
+          <dt>Yr planted</dt><dd id="p-yr"></dd>
+        </dl>
+        <p class="popup-loc" id="p-loc"></p>
+      </aside>
+      <footer class="plate-footer">
+        <span>v0.1 · data: City of Saint Paul Forestry · vellum plate, in progress</span>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

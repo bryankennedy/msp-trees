@@ -1,0 +1,20 @@
+{
+  "name": "msp-trees-app",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Saint Paul boulevard trees — vellum web map (v1 SPA)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "maplibre-gl": "^4.7.1",
+    "pmtiles": "^3.2.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}
