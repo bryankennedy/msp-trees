@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <title>Heatmap — Saint Paul Boulevard Trees</title>
+    <link rel="preconnect" href="https://tiles.openfreemap.org" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app" class="app-map">
+      <header class="plate-header">
+        <h1>
+          <span class="plate-title-main">Plate III.</span>
+          <span class="plate-title-sub">Boulevard Trees — Density Heatmap</span>
+        </h1>
+        <p class="plate-subtitle">
+          a sepia density wash at the bird's-eye view, dissolving into individual
+          specimens as you zoom · <span id="tree-count">…</span> specimens
+        </p>
+        <nav class="plate-nav">
+          <a href="/" class="plate-nav-link">Map (dots)</a>
+          <a href="/heatmap" class="plate-nav-link is-active" aria-current="page">Heatmap</a>
+          <a href="/hexbin" class="plate-nav-link">Hexbin</a>
+          <a href="/species" class="plate-nav-link">Species index</a>
+        </nav>
+      </header>
+      <main id="map" aria-label="Heatmap of Saint Paul boulevard tree density"></main>
+      <aside id="sidebar" class="sidebar" aria-label="Legend and details">
+        <section id="popup-card" class="popup-card" hidden>
+          <button class="popup-close" aria-label="Close">×</button>
+          <p class="popup-eyebrow">Specimen</p>
+          <h2 class="popup-species" id="p-spp"></h2>
+          <p class="popup-bot" id="p-bot"></p>
+          <dl class="popup-fields">
+            <dt>Condition</dt><dd id="p-cond"></dd>
+            <dt>Trunk dia.</dt><dd id="p-dbh"></dd>
+            <dt>Yr planted</dt><dd id="p-yr"></dd>
+          </dl>
+          <p class="popup-loc" id="p-loc"></p>
+        </section>
+        <section id="legend" class="legend" aria-label="Genus legend">
+          <h2 class="legend-title">Genus <span class="legend-note">(dots, when zoomed in)</span></h2>
+          <ul id="legend-items" class="legend-list"></ul>
+        </section>
+      </aside>
+      <footer class="plate-footer">
+        <span>v0.1 · data: City of Saint Paul Forestry · overview study: density heatmap</span>
+      </footer>
+    </div>
+    <script type="module" src="./heatmap.ts"></script>
+  </body>
+</html>

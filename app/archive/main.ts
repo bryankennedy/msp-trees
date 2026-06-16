@@ -4,8 +4,8 @@
 // transparently replaces the source data once ready (no flicker, same layer).
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { vellumStyle } from "./style-vellum";
-import { annotateGenus, buildColorExpression, LEGEND } from "./taxonomy";
+import { vellumStyle } from "../src/style-vellum";
+import { annotateGenus, buildColorExpression, LEGEND } from "../src/taxonomy";
 
 const SAINT_PAUL_CENTER: [number, number] = [-93.1, 44.95];
 const SAINT_PAUL_BBOX: [number, number, number, number] = [-93.25, 44.88, -92.96, 45.06];

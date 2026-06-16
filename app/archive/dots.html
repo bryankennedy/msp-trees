@@ -18,19 +18,20 @@
       <header class="plate-header">
         <h1>
           <span class="plate-title-main">Plate I.</span>
-          <span class="plate-title-sub">Boulevard Trees — Hexbin by Dominant Genus</span>
+          <span class="plate-title-sub">Public Boulevard Trees of Saint Paul, Minnesota</span>
         </h1>
         <p class="plate-subtitle">
-          each cell tinted by its most common genus, shaded by tree count ·
-          dissolves into individual specimens as you zoom · <span id="tree-count">…</span> specimens
+          drawn from the City Forestry survey · <span id="tree-count">…</span> specimens
         </p>
         <nav class="plate-nav">
-          <a href="/" class="plate-nav-link is-active" aria-current="page">Map</a>
+          <a href="/" class="plate-nav-link is-active" aria-current="page">Map (dots)</a>
+          <a href="/heatmap" class="plate-nav-link">Heatmap</a>
+          <a href="/hexbin" class="plate-nav-link">Hexbin</a>
           <a href="/species" class="plate-nav-link">Species index</a>
         </nav>
       </header>
-      <main id="map" aria-label="Hexbin map of Saint Paul boulevard trees by dominant genus"></main>
-      <aside id="sidebar" class="sidebar" aria-label="Controls, legend and details">
+      <main id="map" aria-label="Map of Saint Paul boulevard trees"></main>
+      <aside id="sidebar" class="sidebar" aria-label="Legend and details">
         <section id="popup-card" class="popup-card" hidden>
           <button class="popup-close" aria-label="Close">×</button>
           <p class="popup-eyebrow">Specimen</p>
@@ -43,31 +44,15 @@
           </dl>
           <p class="popup-loc" id="p-loc"></p>
         </section>
-        <section id="hex-card" class="popup-card" hidden>
-          <button class="popup-close" aria-label="Close">×</button>
-          <p class="popup-eyebrow popup-eyebrow--area">Area summary</p>
-          <h2 class="popup-species" id="h-title"></h2>
-          <p class="popup-bot" id="h-sub"></p>
-          <ul class="hex-breakdown" id="h-breakdown"></ul>
-          <p class="popup-loc" id="h-foot"></p>
-        </section>
         <section id="legend" class="legend" aria-label="Genus legend">
-          <h2 class="legend-title">Dominant genus</h2>
+          <h2 class="legend-title">Genus</h2>
           <ul id="legend-items" class="legend-list"></ul>
-        </section>
-        <section id="hex-control" class="hex-control" aria-label="Hexagon size">
-          <label for="hex-size" class="hex-control-title">Hexagon size</label>
-          <div class="hex-control-row">
-            <input id="hex-size" class="hex-range" type="range" min="75" max="400" step="5" value="150" />
-            <output id="hex-size-out" for="hex-size" class="hex-control-val">150 m</output>
-          </div>
-          <p class="hex-control-note">smaller = finer detail · larger = broader genus regions</p>
         </section>
       </aside>
       <footer class="plate-footer">
-        <span>v0.1 · data: City of Saint Paul Forestry · overview study: dominant-genus hexbin</span>
+        <span>v0.1 · data: City of Saint Paul Forestry · vellum plate, in progress</span>
       </footer>
     </div>
-    <script type="module" src="/src/hexbin.ts"></script>
+    <script type="module" src="./main.ts"></script>
   </body>
 </html>

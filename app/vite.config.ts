@@ -28,6 +28,9 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
+        // index.html is the hexbin map (the default route); species.html is the
+        // species index / histogram. The former dots + heatmap plates are kept
+        // under archive/ and intentionally excluded from the build.
         main: resolve(__dirname, "index.html"),
         species: resolve(__dirname, "species.html"),
       },
@@ -52,15 +55,16 @@ export default defineConfig({
   },
   plugins: [
     {
-      // Clean URL: serve /species (and /species/) from species.html in both the
-      // dev and preview servers. Installed in the configure*Server body (not the
-      // returned hook) so it runs before Vite's own html-serving middleware.
-      name: "species-clean-url",
+      // Clean URLs: serve /species, /heatmap, /hexbin (with or without a
+      // trailing slash) from their respective .html in both the dev and preview
+      // servers. Installed in the configure*Server body (not the returned hook)
+      // so it runs before Vite's own html-serving middleware.
+      name: "clean-urls",
       configureServer(server) {
-        server.middlewares.use(rewriteSpecies);
+        server.middlewares.use(rewriteCleanUrls);
       },
       configurePreviewServer(server) {
-        server.middlewares.use(rewriteSpecies);
+        server.middlewares.use(rewriteCleanUrls);
       },
     },
     {
@@ -81,14 +85,34 @@ export default defineConfig({
   ],
 });
 
-function rewriteSpecies(
+// Clean-URL routes → their HTML entry point (trailing slash optional).
+const CLEAN_URLS: Record<string, string> = {
+  "/species": "/species.html",
+};
+
+// The dots + heatmap plates were archived and the hexbin view became the home
+// page; redirect the old map routes to "/" so existing links don't 404.
+const REDIRECTS: Record<string, string> = {
+  "/hexbin": "/",
+  "/heatmap": "/",
+};
+
+function rewriteCleanUrls(
   req: import("node:http").IncomingMessage,
-  _res: import("node:http").ServerResponse,
+  res: import("node:http").ServerResponse,
   next: (err?: unknown) => void,
 ) {
-  const path = (req.url ?? "/").split("?")[0];
-  if (path === "/species" || path === "/species/") {
-    req.url = "/species.html" + (req.url!.includes("?") ? req.url!.slice(req.url!.indexOf("?")) : "");
+  const path = (req.url ?? "/").split("?")[0].replace(/\/$/, "");
+  if (REDIRECTS[path]) {
+    res.statusCode = 308;
+    res.setHeader("Location", REDIRECTS[path]);
+    res.end();
+    return;
+  }
+  const target = CLEAN_URLS[path];
+  if (target) {
+    const query = req.url!.includes("?") ? req.url!.slice(req.url!.indexOf("?")) : "";
+    req.url = target + query;
   }
   next();
 }
