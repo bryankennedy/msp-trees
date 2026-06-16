@@ -43,5 +43,7 @@ app/.certs/
 .vite/
 .bun/
 
-# Local runtime artifacts — dev-server logs and verification screenshots
-outputs/
+# Local runtime artifacts — dev-server logs and verification screenshots (ignore contents, not the dir itself)
+outputs/*
+# Keep the directory's README explaining its purpose, despite ignoring its contents
+!outputs/README.md

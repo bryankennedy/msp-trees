@@ -1,33 +1,21 @@
-# Saint Paul Boulevard Trees — GIS Project
+# Twin Cities Public Tree Explorer
+An interactive web mapping project visualizing the urban forest of the 
+Twin Cities (MSP) metro area. The initial release focuses on integrating 
+city-maintained public tree data from Saint Paul and Minneapolis.
 
-A QGIS project for analyzing the public boulevard (street) trees of Saint Paul,
-Minnesota, in relation to the regional road network. The goal is to associate the
-City's public tree inventory with metro road centerlines to support boulevard-tree
-analysis (e.g. trees per street segment, species distribution along corridors).
+## Web app (tree viewer)
 
-## Directory Structure
-
-```
-stpaul-trees/
-├── stpaul_trees.qgz          # QGIS project file
-├── README.md
-├── .gitignore
-├── data/
-│   ├── raw/                   # Source data — large & re-downloadable (git-ignored)
-│   │   ├── metro_road_centerlines/   # MetroGIS road centerlines shapefile + source zip
-│   │   └── boulevard_trees/          # Saint Paul public trees shapefile + source zip
-│   └── processed/             # Derived/cleaned spatial data (tracked dir, contents vary)
-├── scripts/                   # Analysis & data-prep scripts (see scripts/README.md)
-├── styles/                    # QGIS .qml layer styles
-└── outputs/                   # Generated maps, exports, reports (git-ignored)
-```
+An interactive web map of the boulevard trees lives in [`app/`](app/). To run it
+locally: `cd app && bun install && bun run dev`. For full instructions —
+including how to **restart the server and keep it running** as a systemd service
+— see **[`app/README.md`](app/README.md)**.
 
 ## Data Sources
 
 | Layer | Source | URL | Date Downloaded |
 |-------|--------|-----|-----------------|
 | Metro Road Centerlines | MetroGIS / Metropolitan Emergency Services Board (MESB), via MN Geospatial Commons | https://gisdata.mn.gov/dataset/us-mn-state-metrogis-trans-road-centerlines-gac | 2026-06-10 |
-| Saint Paul Public Trees | City of Saint Paul (public tree inventory) | _(unknown — verify; likely Saint Paul / Ramsey County open data portal)_ | 2026-06-10 |
+| Saint Paul Public Trees | City of Saint Paul (public tree inventory) | Retrieved via email request to the City of Saint Paul | 2026-06-10 |
 
 > Download dates are inferred from the source `.zip` file modification times and should
 > be confirmed. The centerlines metadata (publication date 2020-03-03) is preserved under

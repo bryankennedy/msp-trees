@@ -258,10 +258,11 @@ stpaul-trees/
 ├── data/
 │   ├── raw/              # source shapefiles (git-ignored)
 │   └── processed/        # geojson + *.pmtiles build artifacts (git-ignored)
-├── styles/               # QGIS .qml + the MapLibre vellum style JSON
 ├── outputs/              # offline map exports (git-ignored)
 ├── wrangler.toml         # Worker + R2 + D1 bindings
-├── stpaul_trees.qgz
+├── qgis/                 # QGIS desktop project (see qgis/README.md)
+│   ├── stpaul_trees.qgz
+│   └── styles/           # QGIS .qml layer styles
 └── docs/SPEC.md          # this file
 ```
 
