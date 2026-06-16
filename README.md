@@ -15,7 +15,7 @@ including how to **restart the server and keep it running** as a systemd service
 | Layer | Source | URL | Date Downloaded |
 |-------|--------|-----|-----------------|
 | Metro Road Centerlines | MetroGIS / Metropolitan Emergency Services Board (MESB), via MN Geospatial Commons | https://gisdata.mn.gov/dataset/us-mn-state-metrogis-trans-road-centerlines-gac | 2026-06-10 |
-| Saint Paul Public Trees | City of Saint Paul (public tree inventory) | Retrieved via email request to the City of Saint Paul | 2026-06-10 |
+| Saint Paul Public Trees | City of Saint Paul (public tree inventory) | Retrieved via a Data Practices Request to the City of Saint Paul | 2026-06-02 |
 
 > Download dates are inferred from the source `.zip` file modification times and should
 > be confirmed. The centerlines metadata (publication date 2020-03-03) is preserved under
