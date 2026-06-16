@@ -42,3 +42,6 @@ app/.certs/
 # Vite / Bun caches
 .vite/
 .bun/
+
+# Local runtime artifacts — dev-server logs and verification screenshots
+outputs/
