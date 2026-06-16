@@ -10,6 +10,7 @@
   --accent: #06a7e0;
   --serif: "Spectral", "Libre Baskerville", Georgia, serif;
   --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sidebar-w: 308px;
 }
 
 * { box-sizing: border-box; }
@@ -29,6 +30,39 @@ body {
   grid-template-rows: auto 1fr auto;
   height: 100dvh;
   position: relative;
+}
+
+/* --- Map + right sidebar layout (map plates only) ------------------------ */
+#app.app-map { grid-template-columns: minmax(0, 1fr) var(--sidebar-w); }
+.app-map > .plate-header,
+.app-map > .plate-footer { grid-column: 1 / -1; }
+.app-map > #map { grid-column: 1; grid-row: 2; }
+
+.sidebar {
+  grid-column: 2; grid-row: 2;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 16px 16px 22px;
+  background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+  border-left: 1px solid var(--rule);
+}
+/* Panels read as consistent flat cards stacked in the rail, not floating
+   overlays — drop the absolute positioning and heavy drop shadows. */
+.sidebar > section {
+  position: relative; inset: auto; margin: 0;
+  width: auto; max-width: none;
+  box-shadow: 0 1px 0 var(--rule);
+}
+
+@media (max-width: 760px) {
+  #app.app-map { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto auto; }
+  .app-map > #map { grid-column: 1; grid-row: 2; }
+  .sidebar {
+    grid-column: 1; grid-row: 3;
+    max-height: 42vh;
+    border-left: 0; border-top: 1px solid var(--rule);
+  }
+  .app-map > .plate-footer { grid-row: 4; }
 }
 
 /* --- Plate navigation ---------------------------------------------------- */
@@ -56,6 +90,10 @@ body {
   margin: 0 0 6px; font-family: var(--sans); font-size: 11px;
   text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft);
 }
+.legend-note {
+  text-transform: none; letter-spacing: 0; font-style: italic;
+  font-family: var(--serif); font-size: 11px; opacity: 0.85;
+}
 .legend-list { list-style: none; margin: 0; padding: 0; }
 .legend-row {
   display: flex; align-items: center; gap: 8px;
@@ -68,6 +106,54 @@ body {
 @media (max-width: 640px) {
   .legend { left: 8px; bottom: 40px; padding: 8px 10px; max-width: 170px; }
   .legend-row { font-size: 12px; line-height: 1.55; }
+}
+
+/* --- Hexbin size control ------------------------------------------------- */
+.hex-control {
+  position: absolute;
+  left: 22px; top: 22px;
+  z-index: 4;
+  background: rgba(242, 233, 210, 0.92);
+  border: 1px solid var(--rule);
+  box-shadow: 0 2px 0 var(--rule), 0 10px 24px rgba(58, 48, 38, 0.14);
+  padding: 10px 14px 11px;
+  width: 232px;
+}
+.hex-control-title {
+  display: block; margin-bottom: 8px;
+  font-family: var(--sans); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft);
+}
+.hex-control-row { display: flex; align-items: center; gap: 10px; }
+.hex-control-val {
+  font-family: var(--serif); font-size: 14px; color: var(--ink);
+  font-variant-numeric: tabular-nums; min-width: 46px; text-align: right;
+}
+.hex-control-note {
+  margin: 8px 0 0; font-family: var(--serif); font-style: italic;
+  font-size: 11px; line-height: 1.35; color: var(--ink-soft);
+}
+
+/* Range input, themed to the vellum palette */
+.hex-range {
+  -webkit-appearance: none; appearance: none;
+  flex: 1; height: 3px; border-radius: 2px;
+  background: var(--rule); outline: none; cursor: pointer;
+}
+.hex-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 15px; height: 15px; border-radius: 50%;
+  background: var(--sage); border: 1.5px solid var(--sage-deep);
+  box-shadow: 0 1px 2px rgba(58, 48, 38, 0.3);
+}
+.hex-range::-moz-range-thumb {
+  width: 15px; height: 15px; border-radius: 50%;
+  background: var(--sage); border: 1.5px solid var(--sage-deep);
+  box-shadow: 0 1px 2px rgba(58, 48, 38, 0.3);
+}
+.hex-range:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+@media (max-width: 640px) {
+  .hex-control { width: 188px; left: 8px; top: 8px; padding: 8px 10px; }
 }
 
 /* --- Header (engraving-style plate caption) ------------------------------ */
@@ -108,6 +194,29 @@ body {
   font-family: var(--serif);
 }
 .popup-card[hidden] { display: none; }
+/* Eyebrow tag that identifies what the popup describes (specimen vs. area) */
+.popup-eyebrow {
+  margin: 0 0 4px; font-family: var(--sans); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-soft);
+}
+.popup-eyebrow::before {
+  content: ""; display: inline-block; width: 16px; height: 2px;
+  margin-right: 7px; vertical-align: middle; background: var(--sage);
+}
+.popup-eyebrow--area::before { background: var(--accent); }
+
+/* Hex area-summary genus breakdown */
+.hex-breakdown {
+  list-style: none; margin: 12px 0 0; padding: 10px 0 0;
+  border-top: 1px solid var(--rule); display: grid; gap: 5px;
+}
+.hex-row { display: flex; align-items: center; gap: 9px; font-size: 14px; }
+.hex-name { flex: 1; }
+.hex-pct { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.hex-swatch {
+  width: 11px; height: 11px; flex: 0 0 11px; border-radius: 50%;
+  display: inline-block; border: 0.5px solid rgba(58, 48, 38, 0.35);
+}
 .popup-close {
   position: absolute; top: 6px; right: 8px;
   background: transparent; border: 0;

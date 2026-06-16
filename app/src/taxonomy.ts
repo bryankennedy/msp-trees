@@ -69,6 +69,16 @@ export const colorOf = (sppCom: unknown): string => {
  */
 export const PLACEHOLDER_GENUS = "·placeholder·";
 
+/**
+ * JS-side counterpart to buildColorExpression: resolve a color from an already
+ * annotated `genus` value (as set by annotateGenus). Used by aggregate layers
+ * that color a bin by its dominant genus outside of a MapLibre expression.
+ */
+export const colorForGenus = (genus: string): string => {
+  if (genus === PLACEHOLDER_GENUS) return PLACEHOLDER_COLOR;
+  return GENUS_COLORS[genus] ?? OTHER_COLOR;
+};
+
 export const buildColorExpression = (): unknown[] => {
   const match: unknown[] = ["match", ["get", "genus"]];
   for (const [genus, color] of Object.entries(GENUS_COLORS)) {
