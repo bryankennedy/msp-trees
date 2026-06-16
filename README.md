@@ -17,36 +17,10 @@ including how to **restart the server and keep it running** as a systemd service
 | Metro Road Centerlines | MetroGIS / Metropolitan Emergency Services Board (MESB), via MN Geospatial Commons | https://gisdata.mn.gov/dataset/us-mn-state-metrogis-trans-road-centerlines-gac | 2026-06-10 |
 | Saint Paul Public Trees | City of Saint Paul (public tree inventory) | Retrieved via a Data Practices Request to the City of Saint Paul | 2026-06-02 |
 
-> Download dates are inferred from the source `.zip` file modification times and should
-> be confirmed. The centerlines metadata (publication date 2020-03-03) is preserved under
-> `data/raw/metro_road_centerlines/metadata/`.
+## Documentation
 
-## Requirements
-
-- **QGIS** 3.28 LTR or newer (project saved as `.qgz`).
-- **Python** 3.10+ for future analysis scripts. Starting dependencies are listed in
-  [`scripts/requirements.txt`](scripts/requirements.txt):
-  - `geopandas` — vector data wrangling
-  - `pandas` — tabular analysis
-  - `pyogrio` — fast OGR-backed vector I/O for GeoPandas
-
-  ```bash
-  cd scripts
-  python -m venv .venv && source .venv/bin/activate
-  pip install -r requirements.txt
-  ```
-
-## Coordinate Reference Systems (CRS)
-
-The two source layers are **not** in the same CRS and must be reprojected to a common
-CRS before any spatial analysis:
-
-- **Metro Road Centerlines** — NAD83 / UTM Zone 15N, **EPSG:26915** (meters). This is the
-  intended project CRS.
-- **Saint Paul Public Trees** — *Ramsey County coordinates*, Lambert Conformal Conic,
-  US survey feet (custom datum). This is a non-standard CRS that PROJ does not resolve by
-  EPSG code (see `data/raw/boulevard_trees/Warnings.txt`). Reproject this layer to
-  **EPSG:26915** in QGIS (or with `geopandas` via `.to_crs(26915)`) before joining it to
-  the centerlines.
-
-**Project CRS:** NAD83 / UTM Zone 15N — **EPSG:26915**.
+- [`app/README.md`](app/README.md) — running the web map viewer (dev server + systemd service).
+- [`qgis/README.md`](qgis/README.md) — the QGIS desktop project, styles, and QGIS requirements.
+- [`data/README.md`](data/README.md) — data layout and coordinate reference system (CRS) notes.
+- [`scripts/README.md`](scripts/README.md) — analysis/data-prep scripts and Python setup.
+- [`docs/SPEC.md`](docs/SPEC.md) — technical specification and target architecture.

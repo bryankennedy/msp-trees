@@ -12,9 +12,13 @@ This is currently a placeholder. Planned/expected work:
 
 ## Setup
 
+Requires **Python** 3.10+. Starting dependencies (see [`requirements.txt`](requirements.txt)):
+
+- `geopandas` — vector data wrangling
+- `pandas` — tabular analysis
+- `pyogrio` — fast OGR-backed vector I/O for GeoPandas
+
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
-
-See [`requirements.txt`](requirements.txt) for dependencies.

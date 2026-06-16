@@ -17,8 +17,12 @@ Treat the web app as the current, maintained view of the data. Use this QGIS
 project for ad-hoc desktop analysis and one-off exports, not as a mirror of
 production.
 
+## Requirements
+
+- **QGIS** 3.28 LTR or newer (project saved as `.qgz`).
+
 ## Coordinate Reference System
 
-Project CRS is **NAD83 / UTM Zone 15N — EPSG:26915**. See the root
-[`README.md`](../README.md#coordinate-reference-systems-crs) for notes on
-reprojecting the source layers before analysis.
+Project CRS is **NAD83 / UTM Zone 15N — EPSG:26915**. See
+[`../data/README.md`](../data/README.md#coordinate-reference-systems-crs) for
+notes on reprojecting the source layers before analysis.
