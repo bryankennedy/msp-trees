@@ -42,21 +42,128 @@ export function createOverviewMap(): maplibregl.Map {
     attributionControl: { compact: true },
   });
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: false, showCompass: false }), "top-right");
-  // "My location" button: prompts for permission, drops a live location dot and
-  // recenters on the user — handy on a phone standing under an actual boulevard
-  // tree. High accuracy + location tracking; the camera eases to the fix and
-  // (because the map is bounded to Saint Paul) clamps gracefully if you're away.
-  map.addControl(
-    new maplibregl.GeolocateControl({
-      positionOptions: { enableHighAccuracy: true },
-      trackUserLocation: true,
-      showUserLocation: true,
-      fitBoundsOptions: { maxZoom: 16 },
-    }),
-    "top-right",
-  );
+  addGeolocate(map);
   map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
   return map;
+}
+
+// The map is clamped to a Saint Paul box via `maxBounds`. That clamp is also
+// what silently breaks the geolocate button when a device reports a position
+// outside the box: MapLibre's GeolocateControl emits `outofmaxbounds` and snaps
+// itself back to inactive WITHOUT moving the camera — which reads as "the button
+// toggles on, then off, and nothing happens." So we keep a handle on the control
+// and the bounds, and on an out-of-bounds fix we temporarily lift the clamp and
+// fly there anyway. We also surface geolocation errors instead of swallowing
+// them, since a denied/timed-out permission otherwise looks identical.
+function addGeolocate(map: maplibregl.Map): void {
+  const SP_BOUNDS = map.getMaxBounds();
+  const geo = new maplibregl.GeolocateControl({
+    positionOptions: { enableHighAccuracy: true, timeout: 10000 },
+    trackUserLocation: true,
+    showUserLocation: true,
+    fitBoundsOptions: { maxZoom: 16 },
+  });
+  map.addControl(geo, "top-right");
+
+  // A real fix arrived. If it falls outside the Saint Paul clamp, drop the clamp
+  // for the rest of the session and ease to the location so the button always
+  // "does something"; in-bounds fixes keep the clamp and behave normally.
+  geo.on("geolocate", (e: GeolocationPosition) => {
+    const { longitude: lon, latitude: lat } = e.coords;
+    const b = SP_BOUNDS;
+    const inside =
+      !b ||
+      (lon >= b.getWest() &&
+        lon <= b.getEast() &&
+        lat >= b.getSouth() &&
+        lat <= b.getNorth());
+    if (!inside) {
+      map.setMaxBounds(null);
+      map.easeTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 14) });
+      flash(map, "You appear to be outside Saint Paul — showing your location.");
+    }
+  });
+
+  // `outofmaxbounds` still fires the instant before our `geolocate` handler on
+  // some versions; lifting the clamp here too makes the recenter reliable.
+  geo.on("outofmaxbounds", (e: GeolocationPosition) => {
+    map.setMaxBounds(null);
+    map.easeTo({
+      center: [e.coords.longitude, e.coords.latitude],
+      zoom: Math.max(map.getZoom(), 14),
+    });
+  });
+
+  geo.on("error", (err: GeolocationPositionError) => {
+    const msg =
+      err.code === 1
+        ? "Location permission denied. Enable it in your browser/site settings."
+        : err.code === 3
+          ? "Couldn't get a location fix in time — try again."
+          : "Location is unavailable on this device.";
+    flash(map, msg);
+  });
+
+  // A browser can only *ask* for location permission in response to a user
+  // gesture — there is no way to silently prompt on page load (browsers block
+  // it). The bare crosshair icon is also easy to miss on a phone. So we add an
+  // explicit, labeled "Locate me" button: tapping it fires the MapLibre control
+  // (`geo.trigger()`), which shows the OS permission prompt the first time.
+  addLocateButton(map, geo);
+}
+
+// Explicit "Locate me" call-to-action overlaid on the map. Clearer than the
+// stock crosshair, and the click is the user gesture the browser requires
+// before it will show the location-permission prompt.
+function addLocateButton(
+  map: maplibregl.Map,
+  geo: maplibregl.GeolocateControl,
+): void {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "locate-cta";
+  btn.innerHTML = `<span aria-hidden="true">📍</span> Locate me`;
+  btn.setAttribute("aria-label", "Center the map on my location");
+  map.getContainer().appendChild(btn);
+
+  btn.addEventListener("click", async () => {
+    // If permission was previously *denied*, geo.trigger() can't re-prompt — the
+    // browser only shows a silent failure. Detect that and tell the user how to
+    // re-enable, instead of leaving them tapping a button that looks broken.
+    // (Permissions API isn't on every browser; when absent we just trigger.)
+    try {
+      const perm = await navigator.permissions?.query({
+        name: "geolocation" as PermissionName,
+      });
+      if (perm?.state === "denied") {
+        flash(
+          map,
+          "Location is blocked for this site. Tap the address-bar lock/⋮ menu → Site settings → allow Location, then try again.",
+        );
+        return;
+      }
+    } catch {
+      /* Permissions API unavailable — fall through and just ask. */
+    }
+    geo.trigger(); // shows the OS permission prompt (first time) and locates.
+  });
+}
+
+// Lightweight transient notice anchored over the map (no dependency, no markup
+// in the HTML). Used to explain why the location button did/didn't move you.
+let flashTimer = 0;
+function flash(map: maplibregl.Map, text: string): void {
+  const parent = map.getContainer();
+  let el = parent.querySelector<HTMLDivElement>(".map-flash");
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "map-flash";
+    parent.appendChild(el);
+  }
+  el.textContent = text;
+  el.classList.add("is-visible");
+  clearTimeout(flashTimer);
+  flashTimer = window.setTimeout(() => el!.classList.remove("is-visible"), 4200);
 }
 
 export function renderLegend(): void {

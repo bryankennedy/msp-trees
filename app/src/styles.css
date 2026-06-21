@@ -55,14 +55,36 @@ body {
 }
 
 @media (max-width: 760px) {
-  #app.app-map { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto auto; }
+  /* Single column. Map takes ~2/3 of the flexible height between header and
+     footer; the remaining 1/3 is the tap-details panel. */
+  #app.app-map {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 2fr) minmax(0, 1fr) auto;
+  }
   .app-map > #map { grid-column: 1; grid-row: 2; }
   .sidebar {
     grid-column: 1; grid-row: 3;
-    max-height: 42vh;
     border-left: 0; border-top: 1px solid var(--rule);
   }
   .app-map > .plate-footer { grid-row: 4; }
+
+  /* Mobile drops the persistent chrome — the legend and hex-size control are
+     desktop-only affordances; the panel is reserved for tapped details. */
+  .legend, .hex-control { display: none; }
+}
+
+/* Placeholder hint shown in the mobile details panel until something is tapped.
+   Desktop never shows it (the panel always has the legend + control). */
+.sidebar-hint {
+  display: none;
+  margin: auto 0;
+  font-family: var(--serif); font-style: italic; font-size: 14px;
+  line-height: 1.5; color: var(--ink-soft); text-align: center;
+}
+@media (max-width: 760px) {
+  .sidebar-hint { display: block; }
+  /* Once a specimen or area card is open, drop the hint. */
+  .sidebar:has(.popup-card:not([hidden])) .sidebar-hint { display: none; }
 }
 
 /* --- Plate navigation ---------------------------------------------------- */
@@ -172,6 +194,58 @@ body {
 
 /* --- Map ----------------------------------------------------------------- */
 #map { position: relative; outline: 1px solid var(--rule); margin: 0; }
+
+/* Transient notice shown over the map by the geolocate button (permission
+   denied, out-of-bounds fix, etc.). Anchored to #map (position: relative). */
+.map-flash {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translate(-50%, 8px);
+  max-width: min(86%, 30rem);
+  padding: 9px 14px;
+  background: rgba(58, 48, 38, 0.92);
+  color: var(--paper);
+  font-family: var(--serif);
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-align: center;
+  border-radius: 7px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 5;
+}
+.map-flash.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+/* Explicit "Locate me" call-to-action over the map. Bottom-center so it's
+   thumb-reachable on a phone; tapping it is the user gesture the browser needs
+   before it will show the location-permission prompt. */
+.locate-cta {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  font-family: var(--serif);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(58, 48, 38, 0.22);
+  cursor: pointer;
+  z-index: 4;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.locate-cta:hover { background: var(--paper-2); box-shadow: 0 3px 11px rgba(58, 48, 38, 0.3); }
+.locate-cta:active { transform: translateX(-50%) translateY(1px); }
+.locate-cta:focus-visible { outline: 2px solid var(--rule); outline-offset: 2px; }
 .maplibregl-canvas { background: var(--paper) !important; }
 .maplibregl-ctrl-attrib {
   background: rgba(242, 233, 210, 0.85) !important;
