@@ -42,6 +42,19 @@ export function createOverviewMap(): maplibregl.Map {
     attributionControl: { compact: true },
   });
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: false, showCompass: false }), "top-right");
+  // "My location" button: prompts for permission, drops a live location dot and
+  // recenters on the user — handy on a phone standing under an actual boulevard
+  // tree. High accuracy + location tracking; the camera eases to the fix and
+  // (because the map is bounded to Saint Paul) clamps gracefully if you're away.
+  map.addControl(
+    new maplibregl.GeolocateControl({
+      positionOptions: { enableHighAccuracy: true },
+      trackUserLocation: true,
+      showUserLocation: true,
+      fitBoundsOptions: { maxZoom: 16 },
+    }),
+    "top-right",
+  );
   map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
   return map;
 }
