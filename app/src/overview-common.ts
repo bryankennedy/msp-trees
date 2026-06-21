@@ -234,7 +234,7 @@ export function addGenusDots(map: maplibregl.Map): void {
     type: "circle",
     source: "trees",
     paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 1.4, 13, 3.0, 16, 7, 19, 14],
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 2.0, 13, 4.2, 16, 9, 19, 17],
       "circle-color": PAPER,
       "circle-opacity": fadeTo(0.9) as never,
       "circle-stroke-width": 0,
@@ -245,7 +245,7 @@ export function addGenusDots(map: maplibregl.Map): void {
     type: "circle",
     source: "trees",
     paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 0.8, 13, 2.0, 16, 5, 19, 10],
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 1.3, 13, 3.0, 16, 6.5, 19, 12],
       "circle-color": buildColorExpression() as never,
       "circle-opacity": fadeTo(1) as never,
       "circle-stroke-color": SAGE_DEEP,
@@ -259,7 +259,7 @@ export function addGenusDots(map: maplibregl.Map): void {
     source: "trees",
     filter: ["==", ["id"], ""],
     paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 5, 18, 14],
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 7, 18, 17],
       "circle-color": "transparent",
       "circle-stroke-color": INK,
       "circle-stroke-width": 1.5,
@@ -290,12 +290,8 @@ export function wireSpecimenPopup(map: maplibregl.Map): void {
     return `${aa} ${ss}`.trim() || "address unavailable";
   };
 
-  map.on("click", "trees-dot", (e) => {
-    // Below the handover point the dots are invisible and the overview layer
-    // owns the click (e.g. the hexbin's area popup) — don't surface a specimen.
-    if (map.getZoom() < CROSSFADE_MID) return;
-    const f = e.features?.[0];
-    if (!f) return;
+  // Populate + reveal the specimen card for a given tree feature.
+  const showSpecimen = (f: maplibregl.MapGeoJSONFeature) => {
     const p = f.properties as Record<string, unknown>;
     popup.spp.textContent = fmtTxt(p.spp_com);
     popup.bot.textContent = p.spp_bot ? String(p.spp_bot) : "";
@@ -306,6 +302,39 @@ export function wireSpecimenPopup(map: maplibregl.Map): void {
     popup.card.removeAttribute("hidden");
     document.getElementById("hex-card")?.setAttribute("hidden", ""); // close the area popup if open
     map.setFilter("trees-selected", ["==", ["id"], f.id ?? ""]);
+  };
+
+  // Finger-friendly tap: a tree dot is only a few pixels wide, so requiring a
+  // pixel-perfect hit makes them nearly untappable on a phone. Instead of
+  // binding to the layer (direct hits only), listen on the whole map and query
+  // a padded box around the tap, then pick the dot nearest the finger. ~14px of
+  // slop ≈ a typical fingertip radius.
+  const TAP_SLOP = 14;
+  map.on("click", (e) => {
+    // Below the handover point the dots are invisible and the overview layer
+    // owns the click (e.g. the hexbin's area popup) — don't surface a specimen.
+    if (map.getZoom() < CROSSFADE_MID) return;
+    const box: [maplibregl.PointLike, maplibregl.PointLike] = [
+      [e.point.x - TAP_SLOP, e.point.y - TAP_SLOP],
+      [e.point.x + TAP_SLOP, e.point.y + TAP_SLOP],
+    ];
+    const hits = map.queryRenderedFeatures(box, { layers: ["trees-dot"] });
+    if (!hits.length) return;
+    // Closest to the actual tap point wins (queryRenderedFeatures returns them
+    // in arbitrary order within the box).
+    let best = hits[0];
+    let bestD = Infinity;
+    for (const f of hits) {
+      const g = f.geometry;
+      if (g.type !== "Point") continue;
+      const pt = map.project(g.coordinates as [number, number]);
+      const d = (pt.x - e.point.x) ** 2 + (pt.y - e.point.y) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = f;
+      }
+    }
+    showSpecimen(best);
   });
   map.on("mouseenter", "trees-dot", () => {
     if (map.getZoom() >= CROSSFADE_MID) map.getCanvas().style.cursor = "pointer";

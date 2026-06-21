@@ -382,7 +382,9 @@ body {
 @media (max-width: 640px) {
   .plate-title-sub { font-size: 17px; }
   .plate-title-main { font-size: 15px; }
-  .popup-card { top: auto; bottom: 36px; right: 12px; left: 12px; width: auto; }
+  /* NB: the specimen/area popups render inside the bottom details panel on
+     mobile (see the .sidebar grid rule above), so they must NOT be floated as
+     an absolute overlay here — that older rule was removed. */
   .report { padding: 16px 12px 32px; }
   .tally { font-size: 13px; }
 }
