@@ -97,7 +97,7 @@ function addGeolocate(map: maplibregl.Map): void {
   geo.on("error", (err: GeolocationPositionError) => {
     const msg =
       err.code === 1
-        ? "Location permission denied. Enable it in your browser/site settings."
+        ? deniedHelp()
         : err.code === 3
           ? "Couldn't get a location fix in time — try again."
           : "Location is unavailable on this device.";
@@ -131,22 +131,53 @@ function addLocateButton(
     // browser only shows a silent failure. Detect that and tell the user how to
     // re-enable, instead of leaving them tapping a button that looks broken.
     // (Permissions API isn't on every browser; when absent we just trigger.)
+    // NOTE: iOS Safari does NOT implement the Permissions API for geolocation,
+    // so this query throws/returns undefined on iPhone and we just fall through
+    // to geo.trigger() — which is correct, because iOS re-prompts on each visit
+    // anyway. The denied path below only meaningfully fires on Chromium/Firefox,
+    // which DO persist a hard "denied". Re-enable guidance is platform-specific
+    // (see deniedHelp), since the steps differ wildly between iOS and desktop.
     try {
       const perm = await navigator.permissions?.query({
         name: "geolocation" as PermissionName,
       });
       if (perm?.state === "denied") {
-        flash(
-          map,
-          "Location is blocked for this site. Tap the address-bar lock/⋮ menu → Site settings → allow Location, then try again.",
-        );
+        flash(map, deniedHelp());
         return;
       }
     } catch {
-      /* Permissions API unavailable — fall through and just ask. */
+      /* Permissions API unavailable (e.g. iOS Safari) — fall through and ask. */
     }
     geo.trigger(); // shows the OS permission prompt (first time) and locates.
   });
+}
+
+// Detect iOS (incl. iPadOS, which reports as "Macintosh" but has touch). Used
+// only to tailor the "how to re-enable location" help text, never to gate
+// behavior — the actual permission flow is identical everywhere.
+function isIOS(): boolean {
+  const ua = navigator.userAgent;
+  return (
+    /iPad|iPhone|iPod/.test(ua) ||
+    (/Macintosh/.test(ua) && "ontouchend" in document)
+  );
+}
+
+// Platform-correct instructions for re-enabling a blocked location permission.
+// The desktop-style "address bar lock → site settings" steps are wrong on iOS,
+// where location lives in the system Settings app, so we branch on the platform.
+function deniedHelp(): string {
+  if (isIOS()) {
+    return (
+      "Location is off. On iPhone: open Settings › Privacy & Security › " +
+      "Location Services → ensure it's on and set Safari to “While Using”, " +
+      "then reload this page and tap Locate me again."
+    );
+  }
+  return (
+    "Location is blocked for this site. Click the lock/ⓘ icon in the address " +
+    "bar → Site settings → allow Location, then try again."
+  );
 }
 
 // Lightweight transient notice anchored over the map (no dependency, no markup
