@@ -14,6 +14,11 @@ const DBF = resolve(ROOT, "data/raw/boulevard_trees/public_trees.dbf");
 const OUT_DIR = resolve(ROOT, "data/processed");
 const OUT_FULL = resolve(OUT_DIR, "trees.geojson");
 const OUT_SAMPLE = resolve(OUT_DIR, "trees.sample.geojson");
+// Pre-aggregated outputs so the app doesn't download the full 51 MB point set on
+// a normal page view: species counts for the species index, and a dominant-genus
+// hex grid (at the app's default cell size) for the overview's first paint.
+const OUT_SPECIES_COUNTS = resolve(OUT_DIR, "species-counts.json");
+const OUT_HEXBIN = resolve(OUT_DIR, "hexbin.geojson");
 
 // Saint Paul bbox (generous, includes inset airports / river bends).
 // [minLon, minLat, maxLon, maxLat]
@@ -34,6 +39,113 @@ const num = (v) => {
 
 const inBbox = (lon, lat) =>
   lon >= BBOX[0] && lon <= BBOX[2] && lat >= BBOX[1] && lat <= BBOX[3];
+
+// --- Taxonomy + hex-binning (KEEP IN SYNC with app/src/taxonomy.ts and the hex
+// math in app/src/hexbin.ts). Duplicated here rather than imported because the
+// app is a bundled TS package and this pipeline is plain Node ESM; Tier 2 (see
+// docs/spec-pmtiles-tiles.md) proposes consolidating the shared logic.
+const PLACEHOLDERS = new Set([
+  "Vacant Site", "N/A", "Do Not Plant", "Stump", "Stump - No Grind",
+  "Unknown", "(unrecorded)",
+]);
+const isPlaceholder = (v) =>
+  v == null || v === "" || PLACEHOLDERS.has(String(v).trim());
+const genusOf = (v) => {
+  if (v == null || v === "") return "Unknown";
+  const s = String(v).trim();
+  const i = s.search(/,| - /);
+  return (i >= 0 ? s.slice(0, i) : s).trim() || "Unknown";
+};
+const GENUS_COLORS = {
+  Maple: "#C44E34", Oak: "#7A5320", Linden: "#7E9B2F", Elm: "#2E8B7F",
+  Honeylocust: "#D69A1E", Hackberry: "#4E6E92", Coffeetree: "#6B4E9B",
+  Birch: "#8FA3AE", Apple: "#CE5D92", Ginkgo: "#E7C13B", Lilac: "#A06CC0",
+  Pine: "#2F6B3D",
+};
+const OTHER_COLOR = "#9C8E74";
+const PLACEHOLDER_COLOR = "#CBBE9F";
+const PLACEHOLDER_GENUS = "·placeholder·";
+const colorForGenus = (g) =>
+  g === PLACEHOLDER_GENUS ? PLACEHOLDER_COLOR : (GENUS_COLORS[g] ?? OTHER_COLOR);
+const genusForFeature = (spp_com) =>
+  isPlaceholder(spp_com) ? PLACEHOLDER_GENUS : genusOf(spp_com);
+
+// Default hex cell radius (center→vertex) in Web-Mercator meters. MUST match
+// HEX_DEFAULT_M in app/src/hexbin.ts so the precomputed grid is identical to
+// what the client would derive at the slider's default position.
+const HEX_DEFAULT_M = 225;
+const RAD = Math.PI / 180;
+const RE = 6378137;
+const mercX = (lon) => RE * lon * RAD;
+const mercY = (lat) => RE * Math.log(Math.tan(Math.PI / 4 + (lat * RAD) / 2));
+const invLon = (x) => x / RE / RAD;
+const invLat = (y) => (2 * Math.atan(Math.exp(y / RE)) - Math.PI / 2) / RAD;
+
+function hexRound(qf, rf) {
+  const xf = qf, zf = rf, yf = -xf - zf;
+  let rx = Math.round(xf), ry = Math.round(yf), rz = Math.round(zf);
+  const dx = Math.abs(rx - xf), dy = Math.abs(ry - yf), dz = Math.abs(rz - zf);
+  if (dx > dy && dx > dz) rx = -ry - rz;
+  else if (dy > dz) ry = -rx - rz;
+  else rz = -rx - ry;
+  return [rx, rz];
+}
+function hexRing(cx, cy, s) {
+  const ring = [];
+  for (let i = 0; i < 6; i++) {
+    const a = RAD * (60 * i - 30);
+    ring.push([invLon(cx + s * Math.cos(a)), invLat(cy + s * Math.sin(a))]);
+  }
+  ring.push(ring[0]);
+  return ring;
+}
+
+/** Aggregate annotated tree points into a dominant-genus hex-grid FeatureCollection. */
+function buildHexbins(features, s) {
+  const bins = new Map();
+  for (const f of features) {
+    const g = f.geometry;
+    if (!g || g.type !== "Point") continue;
+    const [lon, lat] = g.coordinates;
+    const x = mercX(lon), y = mercY(lat);
+    const qf = ((Math.sqrt(3) / 3) * x - y / 3) / s;
+    const rf = ((2 / 3) * y) / s;
+    const [q, r] = hexRound(qf, rf);
+    const key = `${q},${r}`;
+    let b = bins.get(key);
+    if (!b) {
+      b = { cx: s * Math.sqrt(3) * (q + r / 2), cy: s * 1.5 * r, total: 0, genus: new Map() };
+      bins.set(key, b);
+    }
+    b.total++;
+    const gen = genusForFeature(f.properties?.spp_com);
+    b.genus.set(gen, (b.genus.get(gen) ?? 0) + 1);
+  }
+
+  let maxTotal = 1;
+  for (const b of bins.values()) if (b.total > maxTotal) maxTotal = b.total;
+  const denom = Math.sqrt(maxTotal);
+
+  const out = [];
+  for (const b of bins.values()) {
+    const sorted = [...b.genus.entries()].sort((a, z) => z[1] - a[1]);
+    const [domGenus, domCount] = sorted[0] ?? [PLACEHOLDER_GENUS, 0];
+    out.push({
+      type: "Feature",
+      geometry: { type: "Polygon", coordinates: [hexRing(b.cx, b.cy, s)] },
+      properties: {
+        count: b.total,
+        intensity: Math.sqrt(b.total) / denom,
+        genus: domGenus,
+        color: colorForGenus(domGenus),
+        share: domCount / b.total,
+        cellSize: Math.round(s),
+        top: JSON.stringify(sorted.slice(0, 5)),
+      },
+    });
+  }
+  return { type: "FeatureCollection", features: out };
+}
 
 const stats = {
   total: 0,
@@ -103,6 +215,31 @@ const sample = {
 await writeFile(OUT_FULL, JSON.stringify(fc));
 await writeFile(OUT_SAMPLE, JSON.stringify(sample));
 
+// --- Pre-aggregated outputs (computed from the in-memory features) -----------
+// species-counts.json: name → count over every record, plus the grand total.
+// Mirrors the normalization in app/src/species.ts (null/empty → "(unrecorded)",
+// trimmed). The app still classifies species vs. placeholders via taxonomy.
+const speciesCounts = new Map();
+for (const f of features) {
+  const raw = f.properties.spp_com;
+  const name = raw == null || raw === "" ? "(unrecorded)" : String(raw).trim();
+  speciesCounts.set(name, (speciesCounts.get(name) ?? 0) + 1);
+}
+const speciesOut = {
+  total: features.length,
+  counts: [...speciesCounts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+};
+await writeFile(OUT_SPECIES_COUNTS, JSON.stringify(speciesOut));
+
+// hexbin.geojson: dominant-genus hex grid at the default cell size, so the
+// overview paints instantly without the full point set. `total` rides along on
+// the FeatureCollection so the app can show the tree count before points load.
+const hexbin = buildHexbins(features, HEX_DEFAULT_M);
+hexbin.total = features.length;
+await writeFile(OUT_HEXBIN, JSON.stringify(hexbin));
+
 const fmt = (n) => n.toLocaleString();
 console.log("\nExtract complete.");
 console.log(`  Scanned:           ${fmt(stats.total)}`);
@@ -111,3 +248,5 @@ console.log(`  Dropped (no L/L):  ${fmt(stats.droppedNoLatLon)}`);
 console.log(`  Dropped (bbox):    ${fmt(stats.droppedOutOfBbox)}`);
 console.log(`  → ${OUT_FULL}`);
 console.log(`  → ${OUT_SAMPLE} (${fmt(sample.features.length)} features)`);
+console.log(`  → ${OUT_SPECIES_COUNTS} (${fmt(speciesOut.counts.length)} distinct names)`);
+console.log(`  → ${OUT_HEXBIN} (${fmt(hexbin.features.length)} hexes @ ${HEX_DEFAULT_M} m)`);

@@ -2,6 +2,7 @@
 // dataset, renders a log-scale abundance histogram and a full count table, and
 // flags the scarce species. Vanilla TS + inline SVG to stay dependency-free and
 // on-aesthetic with the vellum plate.
+import "./analytics";
 import "./styles.css";
 import {
   colorOf,
@@ -21,34 +22,42 @@ const setText = (id: string, s: string) => {
 
 const fmt = (n: number) => n.toLocaleString();
 
-async function load(): Promise<{ features: Array<{ properties: Record<string, unknown> }> }> {
-  // Prefer the full set for accurate counts; fall back to the sample if the
-  // processed file isn't being served.
-  for (const url of ["/data/trees.geojson", "/data/trees.sample.geojson"]) {
-    try {
-      const r = await fetch(url);
-      if (r.ok) return await r.json();
-    } catch { /* try next */ }
-  }
-  throw new Error("no data source reachable");
-}
+type Counts = { total: number; counts: Row[] };
 
-function tally(features: Array<{ properties: Record<string, unknown> }>) {
+async function load(): Promise<Counts> {
+  // Prefer the pre-aggregated counts (a few KB) produced by the pipeline. Fall
+  // back to counting the sample GeoJSON client-side only if that file is missing,
+  // so the page still renders (approximately) rather than blanking.
+  try {
+    const r = await fetch("/data/species-counts.json");
+    if (r.ok) return await r.json();
+  } catch { /* fall through to the sample */ }
+
+  const r = await fetch("/data/trees.sample.geojson");
+  if (!r.ok) throw new Error("no data source reachable");
+  const fc: { features: Array<{ properties: Record<string, unknown> }> } = await r.json();
   const counts = new Map<string, number>();
-  let total = 0;
-  for (const f of features) {
-    total++;
+  for (const f of fc.features) {
     const raw = f.properties?.spp_com;
     const name = raw == null || raw === "" ? "(unrecorded)" : String(raw).trim();
     counts.set(name, (counts.get(name) ?? 0) + 1);
   }
-  const all: Row[] = [...counts.entries()]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  return {
+    total: fc.features.length,
+    counts: [...counts.entries()].map(([name, count]) => ({ name, count })),
+  };
+}
 
+// Split the raw name→count list into living species vs. non-tree placeholders,
+// sorted most→least common. (The pipeline already sorts, but re-sorting keeps
+// this correct for the client-counted fallback path too.)
+function classify(data: Counts) {
+  const all: Row[] = [...data.counts].sort(
+    (a, b) => b.count - a.count || a.name.localeCompare(b.name),
+  );
   const species = all.filter((r) => !isPlaceholder(r.name));
   const placeholders = all.filter((r) => isPlaceholder(r.name));
-  return { total, all, species, placeholders };
+  return { total: data.total, all, species, placeholders };
 }
 
 // --- Log-scale histogram (inline SVG) -------------------------------------
@@ -118,7 +127,7 @@ function renderHistogram(species: Row[]): void {
 }
 
 // --- Summary cards --------------------------------------------------------
-function renderSummary(d: ReturnType<typeof tally>): void {
+function renderSummary(d: ReturnType<typeof classify>): void {
   const host = $("report-summary");
   if (!host) return;
   const livingTrees = d.species.reduce((s, r) => s + r.count, 0);
@@ -141,7 +150,7 @@ function renderSummary(d: ReturnType<typeof tally>): void {
 }
 
 // --- Table ----------------------------------------------------------------
-function renderTable(d: ReturnType<typeof tally>): void {
+function renderTable(d: ReturnType<typeof classify>): void {
   const body = $("tally-body");
   if (!body) return;
   const rows: string[] = [];
@@ -182,7 +191,7 @@ const escapeAttr = (s: string) => escapeText(s).replace(/"/g, "&quot;");
 (async () => {
   try {
     const data = await load();
-    const d = tally(data.features ?? []);
+    const d = classify(data);
     renderSummary(d);
     renderHistogram(d.species);
     renderTable(d);

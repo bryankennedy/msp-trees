@@ -6,9 +6,12 @@
 // a binning step and coarser spatial detail. Zooming in dissolves the hexes
 // into individual genus dots (shared with the control plate).
 //
-// The binning runs client-side here so the comparison is self-contained (no
-// pipeline change). For production this would move into extract.mjs so the grid
-// ships pre-aggregated; see the SPEC note in the project README.
+// The default-size grid ships pre-aggregated from the pipeline (extract.mjs →
+// data/processed/hexbin.geojson) so a normal overview visit doesn't download the
+// full point set. The same binning still runs client-side (buildHexbins below)
+// when the reader drags the size slider to a non-default value or once the full
+// points have lazy-loaded for the zoomed-in dots.
+import "./analytics";
 import { type GeoJSONSource } from "maplibre-gl";
 import {
     createOverviewMap,
@@ -16,6 +19,8 @@ import {
     addGenusDots,
     wireSpecimenPopup,
     loadTrees,
+    ensureTreesSource,
+    setCount,
     FADE_LO,
     FADE_HI,
     CROSSFADE_MID,
@@ -254,25 +259,61 @@ map.on("load", () => {
         },
     });
 
-    // Re-bin the most recently loaded points at the current slider size and push
-    // them to the hex source. Cheap (single O(n) pass), so safe to call live.
+    // First paint uses the PRE-AGGREGATED grid the pipeline emits at the default
+    // cell size (≈125 KB gzip) instead of downloading the full 51 MB point set
+    // and binning it in the browser. The full points then load lazily — only
+    // when the reader actually needs per-tree data: to re-bin at a non-default
+    // size, or to see the dots fade in on zoom-in. A normal overview visit never
+    // fetches the big file.
+    const hexSource = () => map.getSource("hexes") as GeoJSONSource;
     let loadedFeatures: GeoJSON.Feature[] = [];
+    let pointsLoaded = false;
+    let needsClientHexes = false; // true only if the precomputed grid is missing
     let hexSize = HEX_DEFAULT_M;
-    const rebuild = () => {
-        (map.getSource("hexes") as GeoJSONSource).setData(
-            buildHexbins(loadedFeatures, hexSize),
-        );
+    const rebuildHexes = () =>
+        hexSource().setData(buildHexbins(loadedFeatures, hexSize));
+
+    // Lazily pull the full point set (sample first, then the full file) into the
+    // shared "trees" source the first time it's needed. loadTrees drives the dots
+    // directly; we only re-bin the hex grid ourselves for a non-default size (at
+    // the default the precomputed grid is already correct), or if that grid
+    // failed to load at all.
+    let pointsRequested = false;
+    const ensurePoints = () => {
+        if (pointsRequested) return;
+        pointsRequested = true;
+        loadTrees(map, (fc) => {
+            loadedFeatures = fc.features ?? [];
+            pointsLoaded = true;
+            if (needsClientHexes || hexSize !== HEX_DEFAULT_M) rebuildHexes();
+        });
     };
 
-    // Shared "trees" source + dots; re-bin each time data arrives (sample first,
-    // then the full set), keeping the points around for live slider re-binning.
-    loadTrees(map, (fc) => {
-        loadedFeatures = fc.features ?? [];
-        rebuild();
+    // First paint: the precomputed default-size grid. If it can't be fetched,
+    // fall back to the old behavior (load points, bin client-side).
+    fetch("/data/hexbin.geojson")
+        .then((r) =>
+            r.ok ? r.json() : Promise.reject(new Error("no precomputed hexbin")),
+        )
+        .then((fc: GeoJSON.FeatureCollection & { total?: number }) => {
+            if (pointsLoaded) return; // the live points already took over
+            hexSource().setData(fc);
+            setCount(fc.total ?? fc.features.length);
+        })
+        .catch(() => {
+            needsClientHexes = true;
+            ensurePoints();
+        });
+
+    // Dots fade in from CROSSFADE_MID; start loading points a zoom level earlier
+    // so they're populated by the time they appear.
+    map.on("zoom", () => {
+        if (map.getZoom() >= FADE_LO) ensurePoints();
     });
 
-    // Hex-size slider. Update the readout immediately; debounce the rebin a touch
-    // so a fast drag doesn't queue a rebuild per pixel.
+    // Hex-size slider. Update the readout immediately; a custom size needs the raw
+    // points, so trigger the lazy load. Debounce the rebin so a fast drag doesn't
+    // queue a rebuild per pixel.
     const slider = document.getElementById(
         "hex-size",
     ) as HTMLInputElement | null;
@@ -285,11 +326,16 @@ map.on("load", () => {
         slider.addEventListener("input", () => {
             hexSize = Number(slider.value);
             if (readout) readout.textContent = `${hexSize} m`;
+            ensurePoints();
+            if (!pointsLoaded) return; // once points arrive, onData rebuilds
             clearTimeout(timer);
-            timer = window.setTimeout(rebuild, 90);
+            timer = window.setTimeout(rebuildHexes, 90);
         });
     }
 
+    // The dot layers attach to the shared "trees" source, so it must exist now
+    // even though its point data loads lazily (ensurePoints) later.
+    ensureTreesSource(map);
     addGenusDots(map);
     wireSpecimenPopup(map);
     wireHexPopup(map);

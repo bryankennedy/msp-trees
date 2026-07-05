@@ -350,11 +350,22 @@ const emptyFC = (): GeoJSON.FeatureCollection => ({ type: "FeatureCollection", f
  * each set. `onData` fires after every successful load so an overview layer can
  * (re)derive itself from the same features.
  */
+/**
+ * Create the (empty) shared "trees" source if it isn't there yet, so the dot
+ * layers can attach at map-load even when the point data is loaded lazily later.
+ * Idempotent — safe to call before loadTrees or standalone.
+ */
+export function ensureTreesSource(map: maplibregl.Map): void {
+  if (!map.getSource("trees")) {
+    map.addSource("trees", { type: "geojson", data: emptyFC(), promoteId: "id" });
+  }
+}
+
 export function loadTrees(
   map: maplibregl.Map,
   onData?: (fc: GeoJSON.FeatureCollection) => void,
 ): void {
-  map.addSource("trees", { type: "geojson", data: emptyFC(), promoteId: "id" });
+  ensureTreesSource(map);
 
   const apply = (json: GeoJSON.FeatureCollection) => {
     annotateGenus(json);
