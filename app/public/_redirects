@@ -1,0 +1,12 @@
+# Cloudflare Pages redirect rules. Vite copies this file verbatim from public/
+# into the build output (dist/_redirects). Evaluated top-to-bottom; first match
+# wins. Clean URLs (e.g. /species → species.html) are handled natively by Pages.
+#
+# NOTE: Pages `_redirects` only matches on PATH, not hostname — a cross-host rule
+# here (www → apex) is silently ignored, so that redirect lives in
+# functions/_middleware.js instead. Only path-based rules belong in this file.
+
+# Legacy map routes archived into the hexbin home view (mirrors the dev server's
+# REDIRECTS map in vite.config.ts).
+/hexbin  /  308
+/heatmap /  308

@@ -1,0 +1,18 @@
+# Cloudflare Pages configuration for the msp-trees site.
+#
+# The static bundle (Vite build output) plus the small pre-aggregated data files
+# are served as Pages assets. The one asset too large for the 25 MiB Pages limit
+# — data/processed/trees.geojson (~51 MB) — lives in R2 and is streamed by the
+# Pages Function at functions/data/trees.geojson.js via the binding below, so the
+# app's `/data/trees.geojson` fetch is unchanged (same-origin, edge-cached).
+#
+# Deploy with `bun run deploy:cf` from ../scripts (loads the API token from
+# app/.env; see scripts/deploy-cloudflare.mjs). Never commit an API token.
+name = "msp-trees"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-07-05"
+
+# R2 bucket holding the full point set. The Pages Function reads it as env.TREES_DATA.
+[[r2_buckets]]
+binding = "TREES_DATA"
+bucket_name = "msp-trees-data"
