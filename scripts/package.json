@@ -6,7 +6,8 @@
   "description": "Data pipeline: shapefile → GeoJSON → (later) PMTiles + D1",
   "scripts": {
     "extract": "bun run extract.mjs",
-    "deploy:cf": "bun run deploy-cloudflare.mjs"
+    "deploy:cf": "bun run deploy-cloudflare.mjs",
+    "deploy:cf:app": "bun run deploy-cloudflare.mjs app"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
