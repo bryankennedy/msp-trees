@@ -23,8 +23,17 @@ __pycache__/
 .venv/
 *.pyc
 
-# Pipeline build artifacts (GeoJSON, PMTiles) — re-derivable from data/raw/
-data/processed/
+# Pipeline build artifacts (GeoJSON, PMTiles) — re-derivable from data/raw/.
+# Exception: the three small pre-aggregated files below are committed because the
+# Pages deploy must ship them and CI builds from a clean checkout with no raw
+# data. They're small (~4.2 MB total) and stable; committing them keeps every
+# build reproducible with no extra fetch step. The 51 MB trees.geojson stays out
+# and lives in R2 (uploaded manually with `deploy:cf r2` on a data re-extract).
+data/processed/*
+!data/processed/.gitkeep
+!data/processed/hexbin.geojson
+!data/processed/species-counts.json
+!data/processed/trees.sample.geojson
 
 # Node / Bun deps and build output — re-derivable from package.json + bun.lockb
 node_modules/
