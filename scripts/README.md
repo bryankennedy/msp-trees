@@ -28,9 +28,20 @@ Everything else under `/data/*` ships as a static Pages asset.
 
 ```bash
 bun run deploy:cf          # build → stage data → upload R2 → deploy Pages
+bun run deploy:cf:app       # build → stage data → deploy Pages (skips R2) — CI path
 bun run deploy:cf pages     # a single step: build | data | r2 | pages | domains
 bun run deploy:cf domains   # one-time: attach msptrees.com + www.msptrees.com
 ```
+
+### Continuous deployment (`.github/workflows/ci.yml`)
+
+Every push to `main` runs the `deploy` job, which is exactly `deploy:cf:app`
+(build → stage data → Pages). It skips the R2 upload — the 51 MB `trees.geojson`
+changes only on a full data re-extract, so re-ship it manually with
+`bun run deploy:cf r2` when the data changes. The three small pre-aggregated
+files under `../data/processed/` are committed to the repo so CI builds a working
+site from a clean checkout. Wrangler runs under Node (never Bun) in CI, as it
+does locally. See `docs/DECISIONS.md` (MSPT-2).
 
 ### Credentials
 

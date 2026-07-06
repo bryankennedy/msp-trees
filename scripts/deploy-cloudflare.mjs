@@ -6,6 +6,7 @@
 //   r2      → upload the 51 MB trees.geojson to the msp-trees-data R2 bucket
 //   pages   → wrangler pages deploy app/dist  (applies wrangler.toml + Functions)
 //   domains → attach msptrees.com + www.msptrees.com as custom domains
+//   app     → build → data → pages   (CI / app-only deploy; skips the R2 upload)
 //   all     → build → data → r2 → pages   (default; `domains` is a one-time step)
 //
 // Secrets: CLOUDFLARE_API_TOKEN is loaded with dotenv from app/.env (git-ignored,
@@ -223,6 +224,15 @@ if (arg === "all") {
   console.log(
     `\n✔ Deployed. If custom domains aren't attached yet, run:  bun run deploy:cf domains`,
   );
+} else if (arg === "app") {
+  // CI / app-only deploy: build → stage the committed pre-aggregated files →
+  // Pages. Deliberately skips the `r2` step: the 51 MB trees.geojson changes
+  // only on a full data re-extract and is uploaded manually with `deploy:cf r2`,
+  // so it isn't re-shipped on every push to main.
+  stepBuild();
+  stepData();
+  stepPages();
+  console.log("\n✔ App deployed to Pages (R2 point set left untouched).");
 } else if (STEPS[arg]) {
   await STEPS[arg]();
   console.log("\n✔ done");
