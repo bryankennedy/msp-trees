@@ -1,0 +1,73 @@
+# CI/CD for MSP Trees (MSPT-2).
+#
+# Two jobs in one file:
+#   test   — typecheck. Runs on every PR and on pushes to main. This is the gate;
+#            make it the required status check on `main`.
+#   deploy — only on push to main, only if `test` is green. Builds the site and
+#            ships it to Cloudflare Pages (app-only: build → stage data → pages).
+#            The 51 MB trees.geojson in R2 changes only on a full data re-extract
+#            and is uploaded manually with `deploy:cf r2`, so CI never re-ships it.
+#
+# Why GitHub Actions (not Cloudflare's Pages Git integration): the repo lives on a
+# self-hosted GitHub-compatible host the Cloudflare GitHub App can't reach. Actions
+# driving `wrangler` with an API token keeps the deploy logic in-repo. Wrangler is
+# run under Node, never Bun — `bunx wrangler` silently fails Pages uploads — so the
+# deploy job pins Node LTS and the deploy script spawns wrangler's bin under it.
+# See docs/DECISIONS.md (MSPT-2).
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   — Pages:Edit + R2:Edit + Zone:Read + DNS:Edit (see scripts/README.md)
+#   CLOUDFLARE_ACCOUNT_ID  — from `bunx wrangler whoami`
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded PR runs; never cancel an in-flight deploy.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - name: Install app deps
+        working-directory: app
+        run: bun install --frozen-lockfile
+      - name: Typecheck
+        working-directory: app
+        run: bun run check # tsc --noEmit
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      # Wrangler must run under Node, not Bun (bunx wrangler fails Pages uploads).
+      # The deploy script spawns wrangler's bin, whose node shebang resolves here.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install app deps
+        working-directory: app
+        run: bun install --frozen-lockfile
+      - name: Install deploy deps
+        working-directory: scripts
+        run: bun install --frozen-lockfile
+      # build → stage the committed pre-aggregated data → deploy Pages (skips R2).
+      - name: Deploy to Cloudflare Pages
+        working-directory: scripts
+        run: bun run deploy:cf:app
