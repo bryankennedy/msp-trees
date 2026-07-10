@@ -52,6 +52,10 @@ app/.certs/
 .vite/
 .bun/
 
+# Local wrangler cache/state, created by `wrangler pages dev` when verifying the
+# built output (e.g. the _headers rules) against a local Pages runtime
+.wrangler/
+
 # Local runtime artifacts — dev-server logs and verification screenshots (ignore contents, not the dir itself)
 outputs/*
 # Keep the directory's README explaining its purpose, despite ignoring its contents
