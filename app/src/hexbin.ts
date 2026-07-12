@@ -278,15 +278,32 @@ map.on("load", () => {
     // directly; we only re-bin the hex grid ourselves for a non-default size (at
     // the default the precomputed grid is already correct), or if that grid
     // failed to load at all.
-    let pointsRequested = false;
-    const ensurePoints = () => {
-        if (pointsRequested) return;
-        pointsRequested = true;
+    //
+    // The load is cancellable: zooming back below CROSSFADE_MID aborts an
+    // in-flight fetch (51 MB decoded — see MSPT-7), and a later re-cross starts
+    // it over. `pin` marks loads whose consumer needs the raw points regardless
+    // of zoom (client-side re-binning); those are never aborted.
+    let pointsDone = false; // full set applied — nothing left to fetch
+    let pointsAbort: AbortController | null = null; // non-null while in flight
+    let pointsPinned = false;
+    const ensurePoints = (pin = false) => {
+        if (pin) pointsPinned = true;
+        if (pointsDone || pointsAbort) return;
+        const ac = new AbortController();
+        pointsAbort = ac;
         loadTrees(map, (fc) => {
             loadedFeatures = fc.features ?? [];
             pointsLoaded = true;
             if (needsClientHexes || hexSize !== HEX_DEFAULT_M) rebuildHexes();
+        }, ac.signal).then((completed) => {
+            if (pointsAbort === ac) pointsAbort = null;
+            if (completed) pointsDone = true;
         });
+    };
+    const abortPoints = () => {
+        if (!pointsAbort || pointsPinned) return;
+        pointsAbort.abort();
+        pointsAbort = null;
     };
 
     // First paint: the precomputed default-size grid. If it can't be fetched,
@@ -302,13 +319,16 @@ map.on("load", () => {
         })
         .catch(() => {
             needsClientHexes = true;
-            ensurePoints();
+            ensurePoints(true); // no grid at all — need the points at any zoom
         });
 
-    // Dots fade in from CROSSFADE_MID; start loading points a zoom level earlier
-    // so they're populated by the time they appear.
+    // Dots are fully transparent below CROSSFADE_MID, so fetching the point set
+    // any earlier downloads 51 MB the user cannot see (the old FADE_LO gate did
+    // exactly that — MSPT-7). Fetch only once the dots have non-zero opacity,
+    // and abort in flight if the user zooms back out of the dot regime.
     map.on("zoom", () => {
-        if (map.getZoom() >= FADE_LO) ensurePoints();
+        if (map.getZoom() >= CROSSFADE_MID) ensurePoints();
+        else abortPoints();
     });
 
     // Hex-size slider. Update the readout immediately; a custom size needs the raw
@@ -326,7 +346,7 @@ map.on("load", () => {
         slider.addEventListener("input", () => {
             hexSize = Number(slider.value);
             if (readout) readout.textContent = `${hexSize} m`;
-            ensurePoints();
+            ensurePoints(true); // re-binning needs the raw points at any zoom
             if (!pointsLoaded) return; // once points arrive, onData rebuilds
             clearTimeout(timer);
             timer = window.setTimeout(rebuildHexes, 90);
