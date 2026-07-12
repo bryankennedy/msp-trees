@@ -39,3 +39,18 @@ legend — the only key to the genus colours — was `display: none` on mobile
 (40.5→64.1%), legend visible with 14 rows and horizontal scroll, hex-tap swaps
 legend→area card and back, count present in footer. Desktop 1280×800:
 header/subtitle/legend/slider/footer all unchanged.
+
+### MSPT-8b — Legend gets three rows instead of one
+
+**Context.** Review feedback on PR #7: the single scrollable row showed only
+4-5 of 14 entries at 375px; make the legend area taller so scrolling is
+rarely needed.
+
+**Decision.** The mobile legend list becomes a 3-row column-flow grid
+(`grid-auto-flow: column`, horizontal scroll only for the overflow) and the
+map/panel split relaxes 3fr/1fr → 7fr/3fr. At 375×667 that shows 12 of 14
+entries with no scrolling — every named genus; only the two muted catch-alls
+("Other genera", "Vacant · stump · do-not-plant") overflow. Map: 399 px =
+59.8% of the viewport, still past the ≥55% / ≥270 px criteria. Fitting all 14
+without scroll would need ~5 rows and give back most of the map gain — not
+worth it for the two lowest-information entries.

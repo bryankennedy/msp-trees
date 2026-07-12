@@ -60,7 +60,9 @@ body {
      legend — or a tapped card — in the remaining quarter (MSPT-8). */
   #app.app-map {
     grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 3fr) minmax(0, 1fr) auto;
+    /* 7:3 rather than 3:1 — the extra panel height lets the legend show
+       three rows of swatches; the map stays past the >=55% criterion. */
+    grid-template-rows: auto minmax(0, 7fr) minmax(0, 3fr) auto;
   }
   .app-map > #map { grid-column: 1; grid-row: 2; }
   .sidebar {
@@ -146,7 +148,13 @@ body {
   }
   .sidebar .legend-title { margin-bottom: 4px; }
   .sidebar .legend-list {
-    display: flex; flex-wrap: nowrap; gap: 0 16px;
+    /* Three rows flowing into columns: ~9-12 of the 14 entries visible at
+       375px before any scrolling, versus 4-5 in a single row. */
+    display: grid;
+    grid-template-rows: repeat(3, auto);
+    grid-auto-flow: column;
+    justify-content: start;
+    gap: 1px 18px;
     overflow-x: auto; -webkit-overflow-scrolling: touch;
     padding-bottom: 4px; /* keep the scrollbar off the labels */
   }
