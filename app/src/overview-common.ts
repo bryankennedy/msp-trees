@@ -380,7 +380,11 @@ export function loadTrees(
       if (r.ok) apply(await r.json());
     } catch { /* sample is best-effort */ }
 
-    requestIdleCallback?.(async () => {
+    // `requestIdleCallback?.()` would still throw a ReferenceError where the
+    // identifier is undeclared (Safari < 17.4 — most iOS devices), silently
+    // stranding the map on the sample set. Feature-detect via typeof instead,
+    // and cap the idle wait so a busy main thread can't defer the load forever.
+    const scheduleFullLoad = async () => {
       try {
         const r = await fetch("/data/trees.geojson");
         if (!r.ok) return;
@@ -388,6 +392,11 @@ export function loadTrees(
       } catch (e) {
         console.warn("[trees] full set failed to load; keeping sample.", e);
       }
-    });
+    };
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback(scheduleFullLoad, { timeout: 2000 });
+    } else {
+      setTimeout(scheduleFullLoad, 1);
+    }
   })();
 }
