@@ -18,7 +18,10 @@
       <header class="plate-header">
         <h1>
           <span class="plate-title-main">Plate I.</span>
-          <span class="plate-title-sub">Boulevard Trees — Hexbin by Dominant Genus</span>
+          <span class="plate-title-sub">
+            <span class="plate-title-long">Boulevard Trees — Hexbin by Dominant Genus</span>
+            <span class="plate-title-short">Boulevard Trees</span>
+          </span>
         </h1>
         <p class="plate-subtitle">
           each cell tinted by its most common genus, shaded by tree count ·
@@ -66,7 +69,8 @@
         <p class="sidebar-hint">Tap a hexagon or specimen on the map for details.</p>
       </aside>
       <footer class="plate-footer">
-        <span>v0.1 · data: City of Saint Paul Forestry · overview study: dominant-genus hexbin</span>
+        <span class="plate-footer-full">v0.1 · data: City of Saint Paul Forestry · overview study: dominant-genus hexbin</span>
+        <span class="plate-footer-compact"><span data-tree-count>…</span> specimens · data: Saint Paul Forestry</span>
       </footer>
     </div>
     <script type="module" src="/src/hexbin.ts"></script>
