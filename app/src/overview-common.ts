@@ -361,10 +361,36 @@ export function ensureTreesSource(map: maplibregl.Map): void {
   }
 }
 
+// Wait for an idle gap before the big fetch. `requestIdleCallback?.()` would
+// still throw a ReferenceError where the identifier is undeclared (Safari
+// < 17.4 — most iOS devices), so feature-detect via typeof; the timeout caps
+// the wait so a busy main thread can't defer the load forever. An abort
+// cancels the pending callback and resolves immediately (the caller checks
+// `signal.aborted` before proceeding).
+function idleGap(signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestIdleCallback === "function") {
+      const id = requestIdleCallback(() => resolve(), { timeout: 2000 });
+      signal?.addEventListener("abort", () => { cancelIdleCallback(id); resolve(); }, { once: true });
+    } else {
+      const id = setTimeout(resolve, 1);
+      signal?.addEventListener("abort", () => { clearTimeout(id); resolve(); }, { once: true });
+    }
+  });
+}
+
+/**
+ * Aborting via `signal` cancels whichever stage is in flight (sample fetch,
+ * idle wait, or the 51 MB full fetch) and leaves whatever data already
+ * applied in place. Resolves true only once the FULL set has been applied,
+ * so a caller can tell a finished load from an aborted or failed one and
+ * re-invoke later.
+ */
 export function loadTrees(
   map: maplibregl.Map,
   onData?: (fc: GeoJSON.FeatureCollection) => void,
-): void {
+  signal?: AbortSignal,
+): Promise<boolean> {
   ensureTreesSource(map);
 
   const apply = (json: GeoJSON.FeatureCollection) => {
@@ -374,29 +400,24 @@ export function loadTrees(
     onData?.(json);
   };
 
-  (async () => {
+  return (async () => {
     try {
-      const r = await fetch("/data/trees.sample.geojson");
+      const r = await fetch("/data/trees.sample.geojson", { signal });
       if (r.ok) apply(await r.json());
-    } catch { /* sample is best-effort */ }
+    } catch { /* sample is best-effort (and abort lands here too) */ }
+    if (signal?.aborted) return false;
 
-    // `requestIdleCallback?.()` would still throw a ReferenceError where the
-    // identifier is undeclared (Safari < 17.4 — most iOS devices), silently
-    // stranding the map on the sample set. Feature-detect via typeof instead,
-    // and cap the idle wait so a busy main thread can't defer the load forever.
-    const scheduleFullLoad = async () => {
-      try {
-        const r = await fetch("/data/trees.geojson");
-        if (!r.ok) return;
-        apply(await r.json());
-      } catch (e) {
-        console.warn("[trees] full set failed to load; keeping sample.", e);
-      }
-    };
-    if (typeof requestIdleCallback === "function") {
-      requestIdleCallback(scheduleFullLoad, { timeout: 2000 });
-    } else {
-      setTimeout(scheduleFullLoad, 1);
+    await idleGap(signal);
+    if (signal?.aborted) return false;
+
+    try {
+      const r = await fetch("/data/trees.geojson", { signal });
+      if (!r.ok) return false;
+      apply(await r.json());
+      return true;
+    } catch (e) {
+      if (!signal?.aborted) console.warn("[trees] full set failed to load; keeping sample.", e);
+      return false;
     }
   })();
 }
