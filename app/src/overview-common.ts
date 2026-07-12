@@ -207,8 +207,12 @@ export function renderLegend(): void {
 }
 
 export function setCount(n: number): void {
-  const el = document.getElementById("tree-count");
-  if (el) el.textContent = `${n.toLocaleString()}`;
+  // The count renders in the header subtitle on desktop and in the compact
+  // footer on mobile (the subtitle is hidden there) — update every slot.
+  const label = n.toLocaleString();
+  document
+    .querySelectorAll<HTMLElement>("#tree-count, [data-tree-count]")
+    .forEach((el) => (el.textContent = label));
 }
 
 // Midpoint of the crossfade band. Doubles as the click handover point: below
