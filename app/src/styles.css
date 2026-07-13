@@ -78,6 +78,19 @@ body {
      swatch row — see the legend section — until a tapped card replaces it. */
   .hex-control { display: none; }
   .sidebar:has(.popup-card:not([hidden])) .legend { display: none; }
+
+  /* A tapped card is the payload of the primary mobile gesture — the panel
+     must grow to show it whole, not clip it mid-row (MSPT-9). While a card
+     is open the panel row sizes to its content, capped so the map never
+     vanishes, and the map yields the difference; closing the card restores
+     the 7:3 split. Browsers without :has() keep the old scrolling panel. */
+  #app.app-map:has(.popup-card:not([hidden])) {
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+  }
+  #app.app-map:has(.popup-card:not([hidden])) .sidebar {
+    max-height: 60vh;
+    max-height: 56dvh;
+  }
 }
 
 /* Placeholder hint shown in the mobile details panel until something is tapped.
